@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div>
+        <h1>Model Evaluation</h1>
+        <p class="subtitle">Performance metrics based on the UNSW-NB15 dataset.</p>
+    </div>
+    <a href="/download_report" style="background: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.3s;">⬇ Download PDF Report</a>
+</div>
+
+{% if metrics %}
+<div class="card" style="margin-bottom: 30px;">
+    <h3>📊 Base Model Training Metrics (Saved)</h3>
+    <div style="display: flex; gap: 20px; margin-top: 20px;">
+        <div style="flex: 1; text-align: center; border-top: 4px solid #a855f7; padding-top: 10px;">
+            <h4 style="color: #94a3b8;">Accuracy</h4>
+            <h2 style="color: #f8fafc; font-size: 2rem;">{{ metrics.accuracy }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center; border-top: 4px solid #10b981; padding-top: 10px;">
+            <h4 style="color: #94a3b8;">Precision</h4>
+            <h2 style="color: #10b981; font-size: 2rem;">{{ metrics.precision }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center; border-top: 4px solid #f59e0b; padding-top: 10px;">
+            <h4 style="color: #94a3b8;">Recall</h4>
+            <h2 style="color: #f59e0b; font-size: 2rem;">{{ metrics.recall }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center; border-top: 4px solid #3b82f6; padding-top: 10px;">
+            <h4 style="color: #94a3b8;">F1-Score</h4>
+            <h2 style="color: #3b82f6; font-size: 2rem;">{{ metrics.f1_score }}</h2>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 30px;">
+        <h4 style="margin-bottom: 15px;">Saved Confusion Matrix</h4>
+        <img src="{{ url_for('static', filename='confusion_matrix.png') }}" alt="Confusion Matrix" style="max-width: 400px; border-radius: 8px;">
+        <p style="color: #94a3b8; margin-top: 10px; font-size: 0.9rem;">
+            Test Records: {{ metrics.total_records }} (Normal: {{ metrics.normal_records }}, Attack: {{ metrics.attack_records }})
+        </p>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <p style="color: #ef4444;">⚠️ No saved metrics found. Please run `python train.py` in the terminal first.</p>
+</div>
+{% endif %}
+
+{% if results and results.metrics %}
+<div class="card" style="border-color: #10b981;">
+    <h3 style="color: #10b981;">🔄 Latest Uploaded File Results</h3>
+    <div style="display: flex; gap: 20px; margin-top: 20px;">
+        <div style="flex: 1; text-align: center;">
+            <h4 style="color: #94a3b8;">Accuracy</h4>
+            <h2 style="color: #f8fafc; font-size: 1.8rem;">{{ results.metrics.accuracy }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <h4 style="color: #94a3b8;">Precision</h4>
+            <h2 style="color: #10b981; font-size: 1.8rem;">{{ results.metrics.precision }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <h4 style="color: #94a3b8;">Recall</h4>
+            <h2 style="color: #f59e0b; font-size: 1.8rem;">{{ results.metrics.recall }}</h2>
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <h4 style="color: #94a3b8;">F1-Score</h4>
+            <h2 style="color: #3b82f6; font-size: 1.8rem;">{{ results.metrics.f1 }}</h2>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 30px;">
+        <img src="{{ url_for('static', filename='dynamic_confusion_matrix.png') }}?t={{ range(1, 10000) | random }}" alt="Dynamic Confusion Matrix" style="max-width: 400px; border-radius: 8px;">
+    </div>
+</div>
+{% endif %}
+{% endblock %}

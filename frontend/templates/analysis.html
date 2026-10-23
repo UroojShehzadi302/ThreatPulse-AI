@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dataset Analysis</h1>
+<p class="subtitle">Upload a network traffic CSV to test it against the trained AI model.</p>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <div style="margin-bottom: 20px;">
+            <label for="file" style="display: block; margin-bottom: 8px;">Select CSV File:</label>
+            <input type="file" name="file" accept=".csv" required style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); color: white; width: 100%;">
+        </div>
+        <button type="submit" style="background: #a855f7; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Upload & Analyze</button>
+    </form>
+</div>
+
+{% if results %}
+<div class="card" style="border-color: #10b981; text-align: center; padding: 40px;">
+    <h2 style="color: #10b981; margin-bottom: 10px;">✅ File Processed Successfully!</h2>
+    <p style="color: #94a3b8; margin-bottom: 20px;">Total {{ results.total }} records were analyzed. Detected {{ results.attack }} attacks.</p>
+    <a href="/evaluation" style="background: #a855f7; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View Detailed Evaluation</a>
+</div>
+{% endif %}
+{% endblock %}

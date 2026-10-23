@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    select option { background-color: #161b22; color: #e2e8f0; }
+    input:focus, select:focus { outline: none; border-color: #a855f7 !important; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    /* Flash Animation for Alert */
+    .alert-flash {
+        animation: redFlash 0.5s ease-in-out;
+    }
+    @keyframes redFlash {
+        0% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+        50% { box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.5); }
+        100% { box-shadow: inset 0 0 0px rgba(239, 68, 68, 0); }
+    }
+</style>
+
+<!-- Top Header Area -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(15, 15, 25, 0.95); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 8px;">
+            <span style="font-size: 1.5rem;">📡</span>
+        </div>
+        <div>
+            <h2 style="margin: 0; font-size: 1.2rem;">Live Monitor</h2>
+            <p style="margin: 0; color: #94a3b8; font-size: 0.85rem;">Capture real-time network traffic</p>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div id="statusIndicator" style="display: flex; align-items: center; gap: 8px; color: #ef4444; font-weight: bold; font-size: 0.9rem;">
+            <div id="statusDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
+            <span id="statusText">Monitoring Stopped</span>
+        </div>
+        <button id="startBtn" onclick="startCapture()" style="background: #10b981; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">▶ Start</button>
+        <button id="stopBtn" onclick="stopCapture()" style="background: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; display: none;">⏹ Stop</button>
+        <button onclick="simulateAttack()" style="background: #f59e0b; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">🚨 Simulate Attack</button>
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px;">
+    <div class="card" style="padding: 20px; border-left: 4px solid #a855f7;">
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Captured Packets</h4>
+        <h2 id="packetCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+    </div>
+    <div class="card" style="padding: 20px; border-left: 4px solid #3b82f6;">
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Flows Analyzed</h4>
+        <h2 id="flowCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+    </div>
+    <div class="card" style="padding: 20px; border-left: 4px solid #f59e0b;">
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">AI Suspicious</h4>
+        <h2 id="aiCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+    </div>
+    <div class="card" style="padding: 20px; border-left: 4px solid #ef4444;">
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Rule Alerts</h4>
+        <h2 id="alertCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+    </div>
+</div>
+
+<!-- Graph and Filters -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+    <div class="card">
+        <h3>Live Traffic Activity</h3>
+        <div style="height: 250px;">
+            <canvas id="liveChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <h3>Filter Traffic</h3>
+        <input type="text" id="searchInput" placeholder="Search IP, domain..." oninput="renderTable()" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; color: white; margin-bottom: 15px; box-sizing: border-box;">
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <select id="protoFilter" onchange="renderTable()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; color: white; cursor: pointer;">
+                <option value="All">Protocol: All</option>
+                <option value="TCP">TCP</option>
+                <option value="UDP">UDP</option>
+                <option value="ICMP">ICMP</option>
+            </select>
+            <select id="sevFilter" onchange="renderTable()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; color: white; cursor: pointer;">
+                <option value="All">Severity: All</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+        </div>
+        <button onclick="renderTable()" style="width: 100%; background: #a855f7; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Apply Filters</button>
+    </div>
+</div>
+
+<!-- Detailed Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 1.1rem;">Live Traffic Details</h3>
+        <span style="color: #64748b; font-size: 0.8rem;">Newest First</span>
+    </div>
+    <div style="max-height: 350px; overflow-y: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead style="background: #0f1115; position: sticky; top: 0; z-index: 10;">
+                <tr style="text-align: left; color: #64748b;">
+                    <th style="padding: 12px 20px;">Time</th>
+                    <th style="padding: 12px;">Source IP</th>
+                    <th style="padding: 12px;">Dest IP</th>
+                    <th style="padding: 12px;">Proto</th>
+                    <th style="padding: 12px;">Domain / App</th>
+                    <th style="padding: 12px;">AI Prediction</th>
+                    <th style="padding: 12px;">Attack Type</th>
+                </tr>
+            </thead>
+            <tbody id="packetTableBody">
+                <tr><td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">Start capture to see live data.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let pollingInterval = null;
+    let packetHistory = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 
+    let allPackets = []; 
+    let lastPacketCount = 0;
+    let lastSuspiciousCount = 0;
+
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    const liveChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['', '', '', '', '', '', '', '', '', ''],
+            datasets: [{
+                label: 'Packets / sec',
+                data: packetHistory,
+                borderColor: '#a855f7',
+                backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { ticks: { color: '#64748b', maxTicksLimit: 5 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { display: false }
+            }
+        }
+    });
+
+    function startCapture() {
+        fetch('/api/start_capture', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'inline-block';
+                document.getElementById('statusIndicator').style.color = '#10b981';
+                document.getElementById('statusDot').style.background = '#10b981';
+                document.getElementById('statusText').innerText = 'Monitoring Active';
+                lastPacketCount = 0;
+                lastSuspiciousCount = 0;
+                pollingInterval = setInterval(updateData, 1000);
+            });
+    }
+
+    function stopCapture() {
+        fetch('/api/stop_capture', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('startBtn').style.display = 'inline-block';
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('statusIndicator').style.color = '#ef4444';
+                document.getElementById('statusDot').style.background = '#ef4444';
+                document.getElementById('statusText').innerText = 'Monitoring Stopped';
+                clearInterval(pollingInterval);
+            });
+    }
+
+    function simulateAttack() {
+        fetch('/api/start_capture', { method: 'POST' })
+            .then(() => {
+                fetch('/api/run_demo_attack', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert("Simulated Attack Started! Watch the table for Suspicious packets.");
+                        if (document.getElementById('startBtn').style.display !== 'none') {
+                            startCapture(); 
+                        }
+                    });
+            });
+    }
+
+    function playBeep() {
+        try {
+            let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let oscillator = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.value = 800;
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.2);
+        } catch(e) { console.log("Audio not supported"); }
+    }
+
+    function updateData() {
+        fetch('/api/capture_status')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('packetCount').innerText = data.packet_count;
+                
+                if (data.recent_packets.length > 0) {
+                    allPackets = data.recent_packets; 
+                    
+                    let currentSuspicious = allPackets.filter(p => p.prediction === 'Suspicious' || p.prediction === 'Malicious').length;
+                    let uniqueIPs = new Set(allPackets.map(p => p.dst)).size;
+                    
+                    document.getElementById('flowCount').innerText = uniqueIPs;
+                    document.getElementById('aiCount').innerText = currentSuspicious;
+                    document.getElementById('alertCount').innerText = currentSuspicious;
+
+                    // Beep & Flash Alert
+                    if (currentSuspicious > lastSuspiciousCount) {
+                        playBeep();
+                        document.body.classList.add('alert-flash');
+                        setTimeout(() => document.body.classList.remove('alert-flash'), 500);
+                    }
+                    lastSuspiciousCount = currentSuspicious;
+
+                    let currentPackets = data.packet_count;
+                    let packetsPerSecond = currentPackets - lastPacketCount;
+                    lastPacketCount = currentPackets;
+                    packetHistory.push(packetsPerSecond);
+                    packetHistory.shift();
+                    liveChart.update();
+
+                    renderTable();
+                }
+            });
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('packetTableBody');
+        tbody.innerHTML = '';
+
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const protoFilter = document.getElementById('protoFilter').value;
+        const sevFilter = document.getElementById('sevFilter').value;
+
+        let filteredPackets = allPackets.filter(pkt => {
+            let srcIP = pkt.src ? pkt.src.toLowerCase() : '';
+            let dstIP = pkt.dst ? pkt.dst.toLowerCase() : '';
+            let domain = pkt.domain ? pkt.domain.toLowerCase() : '';
+            
+            let matchesSearch = srcIP.includes(searchText) || dstIP.includes(searchText) || domain.includes(searchText);
+            let matchesProto = (protoFilter === 'All' || pkt.protocol === protoFilter);
+            let matchesSev = (sevFilter === 'All' || pkt.severity === sevFilter);
+            
+            return matchesSearch && matchesProto && matchesSev;
+        });
+
+        if (filteredPackets.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">No packets match your filters.</td></tr>';
+            return;
+        }
+
+        for (let i = filteredPackets.length - 1; i >= 0; i--) {
+            let pkt = filteredPackets[i];
+            let protoColor = pkt.protocol === 'TCP' ? '#3b82f6' : (pkt.protocol === 'UDP' ? '#10b981' : '#f59e0b');
+            let predColor = pkt.prediction === 'Suspicious' ? '#f59e0b' : (pkt.prediction === 'Malicious' ? '#ef4444' : '#10b981');
+            
+            let now = new Date();
+            let timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 10px 20px; color: #64748b;">${timeStr}</td>
+                    <td style="padding: 10px; color: #e2e8f0;">${pkt.src}</td>
+                    <td style="padding: 10px; color: #e2e8f0;">${pkt.dst}</td>
+                    <td style="padding: 10px;"><span style="color: ${protoColor}; font-weight: bold;">${pkt.protocol}</span></td>
+                    <td style="padding: 10px;">
+                        <div style="color: #a855f7; font-weight: 500;">${pkt.domain}</div>
+                        <div style="color: #64748b; font-size: 0.75rem;">${pkt.app}</div>
+                    </td>
+                    <td style="padding: 10px;">
+                        <span style="background: rgba(255,255,255,0.05); color: ${predColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);">${pkt.prediction}</span>
+                    </td>
+                    <td style="padding: 10px; color: ${pkt.prediction === 'Suspicious' ? '#ef4444' : '#64748b'}; font-size: 0.8rem;">
+                        ${pkt.attack_type}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+</script>
+{% endblock %}

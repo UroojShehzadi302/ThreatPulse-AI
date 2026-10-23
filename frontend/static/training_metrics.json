@@ -1,0 +1,1 @@
+{"accuracy": "99.34%", "precision": "95.90%", "recall": "99.00%", "f1_score": "97.43%", "total_records": 508010, "normal_records": 443608, "attack_records": 64402}

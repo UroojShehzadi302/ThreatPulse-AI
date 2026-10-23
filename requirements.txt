@@ -1,0 +1,10 @@
+Flask
+python-dotenv
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+scapy
+psutil
+reportlab

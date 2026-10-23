@@ -1,0 +1,6 @@
+{
+  "limit": 1000000,
+  "sequential": 62,
+  "openmp": 19,
+  "pthreads": 27
+}
