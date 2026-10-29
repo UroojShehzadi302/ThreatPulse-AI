@@ -1,5 +1,4 @@
 import os
-import sys
 import json
 import threading
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify, send_file
@@ -27,22 +26,9 @@ def create_app():
             with open(metrics_path, 'r') as f:
                 metrics_data = json.load(f)
 
-        pdc_path = os.path.join(BASE_DIR, 'pdc', 'results.json')
-        pdc_data = {}
-        if os.path.exists(pdc_path):
-            with open(pdc_path, 'r') as f:
-                pdc_data = json.load(f)
-
         live_packets = monitor_instance.packet_count
 
-        return render_template('dashboard.html', metrics=metrics_data, pdc=pdc_data, live_packets=live_packets)
-
-    @app.route('/readiness')
-    def readiness():
-        py_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-        model_path = os.path.join(BASE_DIR, 'models', 'random_forest_model.pkl')
-        model_exists = os.path.exists(model_path)
-        return render_template('readiness.html', python_version=py_version, model_status=model_exists)
+        return render_template('dashboard.html', metrics=metrics_data, live_packets=live_packets)
 
     @app.route('/analysis', methods=['GET', 'POST'])
     def analysis():
@@ -129,7 +115,10 @@ def create_app():
         return jsonify({
             "is_running": monitor_instance.is_running,
             "packet_count": monitor_instance.packet_count,
-            "recent_packets": monitor_instance.recent_packets
+            "flows_analyzed": monitor_instance.flows_analyzed,
+            "attack_count": monitor_instance.attack_count,
+            "model_status": monitor_instance.model_status,
+            "recent_flows": monitor_instance.recent_flows
         })
 
     @app.route('/api/run_demo_attack', methods=['POST'])

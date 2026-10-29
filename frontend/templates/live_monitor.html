@@ -21,17 +21,17 @@
 </style>
 
 <!-- Top Header Area -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(15, 15, 25, 0.95); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+<div class="page-header" style="background: rgba(15, 15, 25, 0.95); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
     <div style="display: flex; align-items: center; gap: 15px;">
         <div style="background: rgba(168, 85, 247, 0.1); padding: 10px; border-radius: 8px;">
             <span style="font-size: 1.5rem;">📡</span>
         </div>
         <div>
             <h2 style="margin: 0; font-size: 1.2rem;">Live Monitor</h2>
-            <p style="margin: 0; color: #94a3b8; font-size: 0.85rem;">Capture real-time network traffic</p>
+            <p style="margin: 0; color: #94a3b8; font-size: 0.85rem;">Real-time flows classified by the Random Forest model · <span id="modelStatus">Model idle</span></p>
         </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 15px;">
+    <div class="header-actions">
         <div id="statusIndicator" style="display: flex; align-items: center; gap: 8px; color: #ef4444; font-weight: bold; font-size: 0.9rem;">
             <div id="statusDot" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>
             <span id="statusText">Monitoring Stopped</span>
@@ -43,7 +43,7 @@
 </div>
 
 <!-- Stats Row -->
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px;">
+<div class="stats-grid">
     <div class="card" style="padding: 20px; border-left: 4px solid #a855f7;">
         <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Captured Packets</h4>
         <h2 id="packetCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
@@ -53,20 +53,20 @@
         <h2 id="flowCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
     </div>
     <div class="card" style="padding: 20px; border-left: 4px solid #f59e0b;">
-        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">AI Suspicious</h4>
-        <h2 id="aiCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">AI Normal</h4>
+        <h2 id="normalCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
     </div>
     <div class="card" style="padding: 20px; border-left: 4px solid #ef4444;">
-        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">Rule Alerts</h4>
-        <h2 id="alertCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
+        <h4 style="color: #94a3b8; margin: 0; font-size: 0.85rem;">AI Attacks</h4>
+        <h2 id="attackCount" style="color: white; margin: 10px 0; font-size: 2rem;">0</h2>
     </div>
 </div>
 
 <!-- Graph and Filters -->
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px;">
+<div class="chart-grid">
     <div class="card">
         <h3>Live Traffic Activity</h3>
-        <div style="height: 250px;">
+        <div class="chart-box" style="height: 250px;">
             <canvas id="liveChart"></canvas>
         </div>
     </div>
@@ -80,6 +80,8 @@
                 <option value="TCP">TCP</option>
                 <option value="UDP">UDP</option>
                 <option value="ICMP">ICMP</option>
+                <option value="IGMP">IGMP</option>
+                <option value="Other">Other</option>
             </select>
             <select id="sevFilter" onchange="renderTable()" style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; color: white; cursor: pointer;">
                 <option value="All">Severity: All</option>
@@ -88,6 +90,11 @@
                 <option value="Low">Low</option>
             </select>
         </div>
+        <select id="predFilter" onchange="renderTable()" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; color: white; cursor: pointer; margin-bottom: 15px;">
+            <option value="All">AI Prediction: All</option>
+            <option value="Attack">Attack only</option>
+            <option value="Normal">Normal only</option>
+        </select>
         <button onclick="renderTable()" style="width: 100%; background: #a855f7; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Apply Filters</button>
     </div>
 </div>
@@ -98,7 +105,7 @@
         <h3 style="margin: 0; font-size: 1.1rem;">Live Traffic Details</h3>
         <span style="color: #64748b; font-size: 0.8rem;">Newest First</span>
     </div>
-    <div style="max-height: 350px; overflow-y: auto;">
+    <div class="table-scroll" style="max-height: 350px; overflow-y: auto;">
         <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
             <thead style="background: #0f1115; position: sticky; top: 0; z-index: 10;">
                 <tr style="text-align: left; color: #64748b;">
@@ -106,25 +113,27 @@
                     <th style="padding: 12px;">Source IP</th>
                     <th style="padding: 12px;">Dest IP</th>
                     <th style="padding: 12px;">Proto</th>
+                    <th style="padding: 12px;">Flow</th>
                     <th style="padding: 12px;">Domain / App</th>
                     <th style="padding: 12px;">AI Prediction</th>
                     <th style="padding: 12px;">Attack Type</th>
                 </tr>
             </thead>
             <tbody id="packetTableBody">
-                <tr><td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">Start capture to see live data.</td></tr>
+                <tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">Start capture to see live data.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+    Chart.defaults.devicePixelRatio = Math.max(window.devicePixelRatio || 1, 2);
     let pollingInterval = null;
     let packetHistory = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 
     let allPackets = []; 
     let lastPacketCount = 0;
-    let lastSuspiciousCount = 0;
+    let lastAttackCount = 0;
 
     const ctx = document.getElementById('liveChart').getContext('2d');
     const liveChart = new Chart(ctx, {
@@ -161,7 +170,7 @@
                 document.getElementById('statusDot').style.background = '#10b981';
                 document.getElementById('statusText').innerText = 'Monitoring Active';
                 lastPacketCount = 0;
-                lastSuspiciousCount = 0;
+                lastAttackCount = 0;
                 pollingInterval = setInterval(updateData, 1000);
             });
     }
@@ -185,7 +194,7 @@
                 fetch('/api/run_demo_attack', { method: 'POST' })
                     .then(res => res.json())
                     .then(data => {
-                        alert("Simulated Attack Started! Watch the table for Suspicious packets.");
+                        alert("Simulated Attack Started! Flows are scored by the AI model once they finish (a few seconds).");
                         if (document.getElementById('startBtn').style.display !== 'none') {
                             startCapture(); 
                         }
@@ -213,32 +222,28 @@
             .then(res => res.json())
             .then(data => {
                 document.getElementById('packetCount').innerText = data.packet_count;
-                
-                if (data.recent_packets.length > 0) {
-                    allPackets = data.recent_packets; 
-                    
-                    let currentSuspicious = allPackets.filter(p => p.prediction === 'Suspicious' || p.prediction === 'Malicious').length;
-                    let uniqueIPs = new Set(allPackets.map(p => p.dst)).size;
-                    
-                    document.getElementById('flowCount').innerText = uniqueIPs;
-                    document.getElementById('aiCount').innerText = currentSuspicious;
-                    document.getElementById('alertCount').innerText = currentSuspicious;
+                document.getElementById('flowCount').innerText = data.flows_analyzed;
+                document.getElementById('normalCount').innerText = data.flows_analyzed - data.attack_count;
+                document.getElementById('attackCount').innerText = data.attack_count;
+                document.getElementById('modelStatus').innerText = data.model_status;
 
-                    // Beep & Flash Alert
-                    if (currentSuspicious > lastSuspiciousCount) {
-                        playBeep();
-                        document.body.classList.add('alert-flash');
-                        setTimeout(() => document.body.classList.remove('alert-flash'), 500);
-                    }
-                    lastSuspiciousCount = currentSuspicious;
+                // Beep & Flash Alert
+                if (data.attack_count > lastAttackCount) {
+                    playBeep();
+                    document.body.classList.add('alert-flash');
+                    setTimeout(() => document.body.classList.remove('alert-flash'), 500);
+                }
+                lastAttackCount = data.attack_count;
 
-                    let currentPackets = data.packet_count;
-                    let packetsPerSecond = currentPackets - lastPacketCount;
-                    lastPacketCount = currentPackets;
-                    packetHistory.push(packetsPerSecond);
-                    packetHistory.shift();
-                    liveChart.update();
+                let currentPackets = data.packet_count;
+                let packetsPerSecond = currentPackets - lastPacketCount;
+                lastPacketCount = currentPackets;
+                packetHistory.push(packetsPerSecond);
+                packetHistory.shift();
+                liveChart.update();
 
+                if (data.recent_flows.length > 0) {
+                    allPackets = data.recent_flows;
                     renderTable();
                 }
             });
@@ -251,6 +256,7 @@
         const searchText = document.getElementById('searchInput').value.toLowerCase();
         const protoFilter = document.getElementById('protoFilter').value;
         const sevFilter = document.getElementById('sevFilter').value;
+        const predFilter = document.getElementById('predFilter').value;
 
         let filteredPackets = allPackets.filter(pkt => {
             let srcIP = pkt.src ? pkt.src.toLowerCase() : '';
@@ -261,21 +267,26 @@
             let matchesProto = (protoFilter === 'All' || pkt.protocol === protoFilter);
             let matchesSev = (sevFilter === 'All' || pkt.severity === sevFilter);
             
-            return matchesSearch && matchesProto && matchesSev;
+            let matchesPred = (predFilter === 'All' || pkt.prediction === predFilter);
+
+            return matchesSearch && matchesProto && matchesSev && matchesPred;
         });
 
+        // Attacks are retained longer than normal flows, so re-sort by time before rendering newest first
+        filteredPackets.sort((a, b) => a.time - b.time);
+
         if (filteredPackets.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #64748b;">No packets match your filters.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">No flows match your filters.</td></tr>';
             return;
         }
 
         for (let i = filteredPackets.length - 1; i >= 0; i--) {
             let pkt = filteredPackets[i];
-            let protoColor = pkt.protocol === 'TCP' ? '#3b82f6' : (pkt.protocol === 'UDP' ? '#10b981' : '#f59e0b');
-            let predColor = pkt.prediction === 'Suspicious' ? '#f59e0b' : (pkt.prediction === 'Malicious' ? '#ef4444' : '#10b981');
-            
-            let now = new Date();
-            let timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            let protoColor = pkt.protocol === 'TCP' ? '#3b82f6' : (pkt.protocol === 'UDP' ? '#10b981' : (pkt.protocol === 'ICMP' ? '#f59e0b' : '#94a3b8'));
+            let isAttack = pkt.prediction === 'Attack';
+            let predColor = isAttack ? (pkt.severity === 'High' ? '#ef4444' : '#f59e0b') : '#10b981';
+
+            let timeStr = new Date(pkt.time * 1000).toLocaleTimeString('en-US', { hour12: false });
 
             tbody.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
@@ -284,13 +295,17 @@
                     <td style="padding: 10px; color: #e2e8f0;">${pkt.dst}</td>
                     <td style="padding: 10px;"><span style="color: ${protoColor}; font-weight: bold;">${pkt.protocol}</span></td>
                     <td style="padding: 10px;">
+                        <div style="color: #e2e8f0;">${pkt.state} · ${pkt.service}${pkt.active ? ' <span style="color: #3b82f6;">(active)</span>' : ''}</div>
+                        <div style="color: #64748b; font-size: 0.75rem;">${pkt.packets} pkts · ${pkt.bytes} B</div>
+                    </td>
+                    <td style="padding: 10px;">
                         <div style="color: #a855f7; font-weight: 500;">${pkt.domain}</div>
                         <div style="color: #64748b; font-size: 0.75rem;">${pkt.app}</div>
                     </td>
                     <td style="padding: 10px;">
-                        <span style="background: rgba(255,255,255,0.05); color: ${predColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);">${pkt.prediction}</span>
+                        <span style="background: rgba(255,255,255,0.05); color: ${predColor}; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);">${pkt.prediction} · ${pkt.confidence}%</span>
                     </td>
-                    <td style="padding: 10px; color: ${pkt.prediction === 'Suspicious' ? '#ef4444' : '#64748b'}; font-size: 0.8rem;">
+                    <td style="padding: 10px; color: ${isAttack ? '#ef4444' : '#64748b'}; font-size: 0.8rem;">
                         ${pkt.attack_type}
                     </td>
                 </tr>

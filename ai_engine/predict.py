@@ -71,6 +71,8 @@ def predict_data(file_path):
         
         # Generate the Confusion Matrix Heatmap
         cm = confusion_matrix(actual_labels, predictions, labels=[0, 1])
+        tn, fp, fn, tp = cm.ravel()
+        metrics['confusion_matrix'] = {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)}
         plt.figure(figsize=(6, 5))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Purples', 
                     xticklabels=['Normal (0)', 'Attack (1)'], 

@@ -8,6 +8,7 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
 from sklearn.preprocessing import StandardScaler
+from live_predictor import build_category_mappings
 
 def load_and_clean_data(train_path, test_path):
     print("Loading prepared datasets...")
@@ -87,6 +88,8 @@ def plot_confusion_matrix(y_test, y_pred, save_path):
 
 def train_model(train_path, test_path):
     train_df, test_df = load_and_clean_data(train_path, test_path)
+    # Live monitor needs the exact category codes used here
+    category_mappings = build_category_mappings(train_df)
     X_train, X_test, y_train, y_test, scaler, feature_names = preprocess_data(train_df, test_df)
     
     print("\nTraining Random Forest Model...")
@@ -122,8 +125,10 @@ def train_model(train_path, test_path):
     joblib.dump(model, '../models/random_forest_model.pkl')
     joblib.dump(scaler, '../models/scaler.pkl')
     joblib.dump(feature_names, '../models/feature_names.pkl')
-    
+    joblib.dump(category_mappings, '../models/category_mappings.pkl')
+
     # Save Metrics to JSON for the UI
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred, labels=[0, 1]).ravel()
     metrics_data = {
         "accuracy": f"{acc * 100:.2f}%",
         "precision": f"{prec * 100:.2f}%",
@@ -131,7 +136,8 @@ def train_model(train_path, test_path):
         "f1_score": f"{f1 * 100:.2f}%",
         "total_records": len(y_test),
         "normal_records": int((y_test == 0).sum()),
-        "attack_records": int((y_test == 1).sum())
+        "attack_records": int((y_test == 1).sum()),
+        "confusion_matrix": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)}
     }
     
     metrics_path = '../frontend/static/training_metrics.json'
